@@ -5,11 +5,13 @@ import pyworld
 from pprint import pprint
 import librosa.display
 import time
+import tqdm
 
 
 def load_wavs(wav_dir, sr):
     wavs = list()
-    for file in os.listdir(wav_dir):
+    print("loading wavs.....")
+    for file in tqdm.tqdm(os.listdir(wav_dir)):
         file_path = os.path.join(wav_dir, file)
         wav, _ = librosa.load(file_path, sr=sr, mono=True)
         # wav = wav.astype(np.float64)
@@ -53,7 +55,8 @@ def world_encode_data(wave, fs, frame_period=5.0, coded_dim=24):
     sps = list()
     aps = list()
     coded_sps = list()
-    for wav in wave:
+    print("world encoding data....")
+    for wav in tqdm.tqdm(wave):
         f0, timeaxis, sp, ap = world_decompose(wav=wav,
                                                fs=fs,
                                                frame_period=frame_period)

@@ -81,9 +81,9 @@ def preprocess_for_training(train_A_dir, train_B_dir, cache_folder):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Prepare data for training Cycle GAN using PyTorch')
-    train_A_dir_default = '../data/vcc2016_training/SF1/'
-    train_B_dir_default = '../data/vcc2016_training/TF2/'
-    cache_folder_default = '../cache_check/'
+    train_A_dir_default = 'data/vcc2018_training/VCC2SF1/'
+    train_B_dir_default = 'data/vcc2018_training/VCC2TM1/'
+    cache_folder_default = 'data/cache_check/'
 
     parser.add_argument('--train_A_dir', type=str,
                         help="Directory for source voice sample", default=train_A_dir_default)

@@ -1,9 +1,9 @@
+import librosa
 import os
 import numpy as np
 import argparse
 import torch
 import time
-import librosa
 import pickle
 
 import preprocess
@@ -416,19 +416,19 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description="Train CycleGAN using source dataset and target dataset")
 
-    logf0s_normalization_default = '../cache/logf0s_normalization.npz'
-    mcep_normalization_default = '../cache/mcep_normalization.npz'
-    coded_sps_A_norm = '../cache/coded_sps_A_norm.pickle'
-    coded_sps_B_norm = '../cache/coded_sps_B_norm.pickle'
-    model_checkpoint = '../cache/model_checkpoint/'
-    resume_training_at = '../cache/model_checkpoint/_CycleGAN_CheckPoint'
+    logf0s_normalization_default = 'data/cache_check/logf0s_normalization.npz'
+    mcep_normalization_default = 'data/cache_check/mcep_normalization.npz'
+    coded_sps_A_norm = 'data/cache_check/coded_sps_A_norm.pickle'
+    coded_sps_B_norm = 'data/cache_check/coded_sps_B_norm.pickle'
+    model_checkpoint = 'data/cache_check/model_checkpoint/'
+    resume_training_at = 'data/cache_check/model_checkpoint/_CycleGAN_CheckPoint'
     resume_training_at = None
 
-    validation_A_dir_default = '../data/vcc2016_training/evaluation_all/SF1/'
-    output_A_dir_default = '../data/vcc2016_training/converted_sound/SF1'
+    validation_A_dir_default = 'data/vcc2018_training.speakers/VCC2SF1/'
+    output_A_dir_default = 'data/vcc2018_training.speakers/converted_sound/VCC2SF1'
 
-    validation_B_dir_default = '../data/vcc2016_training/evaluation_all/TF2/'
-    output_B_dir_default = '../data/vcc2016_training/converted_sound/TF2/'
+    validation_B_dir_default = 'data/vcc2018_training.speakers/VCC2TM2/'
+    output_B_dir_default = 'data/vcc2018_training.speakers/converted_sound/VCC2TM2/'
 
     parser.add_argument('--logf0s_normalization', type=str,
                         help="Cached location for log f0s normalized", default=logf0s_normalization_default)
