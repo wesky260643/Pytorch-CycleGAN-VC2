@@ -83,7 +83,7 @@ if __name__ == '__main__':
         description='Prepare data for training Cycle GAN using PyTorch')
     train_A_dir_default = 'data/vcc2018_training/VCC2SF1/'
     train_B_dir_default = 'data/vcc2018_training/VCC2TM1/'
-    cache_folder_default = 'data/cache_check/'
+    cache_folder_default = 'data/cache_check.2/'
 
     parser.add_argument('--train_A_dir', type=str,
                         help="Directory for source voice sample", default=train_A_dir_default)
