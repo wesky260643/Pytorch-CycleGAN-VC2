@@ -1,0 +1,2 @@
+cache_check.sf1_tm2/ : 使用two-step loss
+cache_check.sf1_tm2.v3/: num_mceps由24改成36，修改网络结果（只剩pixel shuffle没有加上)

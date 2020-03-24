@@ -48,9 +48,11 @@ class CycleGANTraining:
 
         # Generator and Discriminator
         self.generator_A2B = Generator().to(self.device)
-        self.generator_B2A = Generator().to(self.device)
+        # self.generator_B2A = Generator().to(self.device)
+        self.generator_B2A = self.generator_A2B 
         self.discriminator_A = Discriminator().to(self.device)
-        self.discriminator_B = Discriminator().to(self.device)
+        # self.discriminator_B = Discriminator().to(self.device)
+        self.discriminator_B = self.discriminator_A 
 
         # Loss Functions
         criterion_mse = torch.nn.MSELoss()
@@ -313,7 +315,7 @@ class CycleGANTraining:
                     validation_end_time - validation_start_time))
 
     def validation_for_A_dir(self):
-        num_mcep = 24
+        num_mcep = 36
         sampling_rate = 16000
         frame_period = 5.0
         n_frames = 128
@@ -366,7 +368,7 @@ class CycleGANTraining:
                                      sr=sampling_rate)
 
     def validation_for_B_dir(self):
-        num_mcep = 24
+        num_mcep = 36
         sampling_rate = 16000
         frame_period = 5.0
         n_frames = 128

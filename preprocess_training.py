@@ -19,7 +19,7 @@ def load_pickle_file(fileName):
 
 
 def preprocess_for_training(train_A_dir, train_B_dir, cache_folder):
-    num_mcep = 24
+    num_mcep = 36
     sampling_rate = 16000
     frame_period = 5.0
     n_frames = 128
