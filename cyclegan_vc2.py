@@ -36,9 +36,11 @@ class PixelShuffle(nn.Module):
 
     def forward(self, input):
         n = input.shape[0]
-        c_out = input.shape[1] // self.upscale_factor
-        w_new = input.shape[2] * self.upscale_factor
-        return input.view(n, c_out, w_new)
+        c_out = int(input.shape[1] / (self.upscale_factor ** 2))
+        h_new = input.shape[2] * self.upscale_factor
+        w_new = input.shape[3] * self.upscale_factor
+        print("-----", input.size(), n, c_out, w_new, type(c_out))
+        return input.view(n, c_out, h_new, w_new)
 
 
 class ResidualLayer(nn.Module):

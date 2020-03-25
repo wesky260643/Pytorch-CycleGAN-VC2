@@ -3,7 +3,7 @@
 # @File Name : train.sh
 # @Purpose :
 # @Creation Date : 2020-03-21 15:12:49
-# @Last Modified : 2020-03-24 14:29:43
+# @Last Modified : 2020-03-25 09:44:23
 # @Created By :  chenjiang
 # @Modified By : chenjiang
 
@@ -20,15 +20,15 @@
 # valid_A_dir="data/vcc2018_training.speakers/VCC2SF1/"
 # valid_B_dir="data/vcc2018_training.speakers/VCC2TM2/"
 
-cache_dir="data/cache_check.sf1_tm2.v4/"
+cache_dir="data/cache_check.sf1_tm2.v5/"
 train_A_dir="data/vcc2018_training.speakers/VCC2SF1/"
 train_B_dir="data/vcc2018_training.speakers/VCC2TM2/"
 valid_A_dir="data/vcc2018_training.speakers/VCC2SF1/"
 valid_B_dir="data/vcc2018_training.speakers/VCC2TM2/"
 
-python preprocess_training.py --train_A_dir ${train_A_dir} \
-                              --train_B_dir ${train_B_dir} \
-                              --cache_folder ${cache_dir} 
+# python preprocess_training.py --train_A_dir ${train_A_dir} \
+#                               --train_B_dir ${train_B_dir} \
+#                               --cache_folder ${cache_dir} 
 
 
 # export CUDA_VISIBLE_DEVICES = "1,2,3" 

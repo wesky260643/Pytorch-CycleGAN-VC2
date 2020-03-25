@@ -1,2 +1,5 @@
-cache_check.sf1_tm2/ : 使用two-step loss
-cache_check.sf1_tm2.v3/: num_mceps由24改成36，修改网络结果（只剩pixel shuffle没有加上)
+cache_check.sf1_tm2 : 使用two-step loss
+cache_check.sf1_tm2.v3: num_mceps由24改成36，修改网络结果（只剩pixel shuffle没有加上), 增加reshape后的instance normalization 
+cache_check.sf1_tm2.v4: let G_A2B=G_B2A && D_A=D_B
+cache_check.sf1_tm2.v5: based on v4 && add pixel_shuffle 
+
