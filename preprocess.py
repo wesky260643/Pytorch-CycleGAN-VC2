@@ -90,8 +90,8 @@ def coded_sps_normalization_fit_transform(coded_sps):
     coded_sps_std = np.std(coded_sps_concatenated, axis=1, keepdims=True)
     coded_sps_normalized = list()
     for coded_sp in coded_sps:
-        coded_sps_normalized.append(
-            (coded_sp - coded_sps_mean) / coded_sps_std)
+        tmp = (coded_sp - coded_sps_mean) / coded_sps_std
+        coded_sps_normalized.append( tmp )
     return coded_sps_normalized, coded_sps_mean, coded_sps_std
 
 

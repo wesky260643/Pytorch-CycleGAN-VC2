@@ -48,11 +48,11 @@ class CycleGANTraining:
 
         # Generator and Discriminator
         self.generator_A2B = Generator().to(self.device)
-        # self.generator_B2A = Generator().to(self.device)
-        self.generator_B2A = self.generator_A2B 
+        self.generator_B2A = Generator().to(self.device)
+        # self.generator_B2A = self.generator_A2B 
         self.discriminator_A = Discriminator().to(self.device)
-        # self.discriminator_B = Discriminator().to(self.device)
-        self.discriminator_B = self.discriminator_A 
+        self.discriminator_B = Discriminator().to(self.device)
+        # self.discriminator_B = self.discriminator_A 
 
         # Loss Functions
         criterion_mse = torch.nn.MSELoss()
@@ -168,8 +168,8 @@ class CycleGANTraining:
                 d_fake_A = self.discriminator_A(fake_A)
                 d_fake_B = self.discriminator_B(fake_B)
 
-                dot_d_fake_A = self.discriminator_A(cycle_A)
-                dot_d_fake_B = self.discriminator_B(cycle_B)
+                # dot_d_fake_A = self.discriminator_A(cycle_A)
+                # dot_d_fake_B = self.discriminator_B(cycle_B)
 
                 # Generator Cycle loss
                 cycleLoss = torch.mean(
@@ -184,13 +184,13 @@ class CycleGANTraining:
                 generator_loss_B2A = torch.mean((1 - d_fake_A) ** 2)
 
                 # two-step generator loss
-                two_step_generator_loss_A = torch.mean((1 - dot_d_fake_A) ** 2)
-                two_step_generator_loss_B = torch.mean((1 - dot_d_fake_B) ** 2)
+                # two_step_generator_loss_A = torch.mean((1 - dot_d_fake_A) ** 2)
+                # two_step_generator_loss_B = torch.mean((1 - dot_d_fake_B) ** 2)
 
                 # Total Generator Loss
                 generator_loss = generator_loss_A2B + generator_loss_B2A + \
-                        two_step_generator_loss_A + two_step_generator_loss_B + \
                     cycle_loss_lambda * cycleLoss + identity_loss_lambda * identiyLoss
+                        # two_step_generator_loss_A + two_step_generator_loss_B + \
                 self.generator_loss_store.append(generator_loss.item())
 
                 # Backprop for Generator
@@ -208,8 +208,8 @@ class CycleGANTraining:
                 loss["G/generator_loss"] = generator_loss.item()
                 loss["G/generator_loss_A2B"] = generator_loss_A2B.item()
                 loss["G/generator_loss_B2A"] = generator_loss_B2A.item()
-                loss["G/two_step_generator_loss_A"] = two_step_generator_loss_A.item()
-                loss["G/two_step_generator_loss_B"] = two_step_generator_loss_B.item()
+                # loss["G/two_step_generator_loss_A"] = two_step_generator_loss_A.item()
+                # loss["G/two_step_generator_loss_B"] = two_step_generator_loss_B.item()
 
                 # Discriminator Loss Function
 
@@ -232,26 +232,27 @@ class CycleGANTraining:
                 d_loss_B = (d_loss_B_real + d_loss_B_fake) / 2.0
 
                 # two step loss function
-                dot_d_A_real = self.discriminator_A(real_A)
-                dot_d_fake_B = self.generator_A2B(real_A)
-                dot_d_cycle_A = self.generator_B2A(dot_d_fake_B)
-                dot_d_A_fake = self.discriminator_A(dot_d_cycle_A)
+                # dot_d_A_real = self.discriminator_A(real_A)
+                # dot_d_fake_B = self.generator_A2B(real_A)
+                # dot_d_cycle_A = self.generator_B2A(dot_d_fake_B)
+                # dot_d_A_fake = self.discriminator_A(dot_d_cycle_A)
 
-                dot_d_B_real = self.discriminator_B(real_B)
-                dot_d_fake_A = self.generator_B2A(real_B)
-                dot_d_cycle_B = self.generator_A2B(dot_d_fake_A)
-                dot_d_B_fake = self.discriminator_B(dot_d_cycle_B)
+                # dot_d_B_real = self.discriminator_B(real_B)
+                # dot_d_fake_A = self.generator_B2A(real_B)
+                # dot_d_cycle_B = self.generator_A2B(dot_d_fake_A)
+                # dot_d_B_fake = self.discriminator_B(dot_d_cycle_B)
 
-                two_step_d_loss_A_real = torch.mean((1 - dot_d_A_real) ** 2)
-                two_step_d_loss_A_fake = torch.mean((0 - dot_d_A_fake) ** 2)
-                two_step_d_loss_A = (two_step_d_loss_A_real + two_step_d_loss_A_fake) / 2
-                
-                two_step_d_loss_B_real = torch.mean((1 - dot_d_B_real) ** 2)
-                two_step_d_loss_B_fake = torch.mean((0 - dot_d_B_fake) ** 2)
-                two_step_d_loss_B = (two_step_d_loss_B_real + two_step_d_loss_B_fake) / 2
+                # two_step_d_loss_A_real = torch.mean((1 - dot_d_A_real) ** 2)
+                # two_step_d_loss_A_fake = torch.mean((0 - dot_d_A_fake) ** 2)
+                # two_step_d_loss_A = (two_step_d_loss_A_real + two_step_d_loss_A_fake) / 2
+                # 
+                # two_step_d_loss_B_real = torch.mean((1 - dot_d_B_real) ** 2)
+                # two_step_d_loss_B_fake = torch.mean((0 - dot_d_B_fake) ** 2)
+                # two_step_d_loss_B = (two_step_d_loss_B_real + two_step_d_loss_B_fake) / 2
 
                 # Final Loss for discriminator
-                d_loss = (d_loss_A + d_loss_B) / 2.0 + (two_step_d_loss_A + two_step_d_loss_B) / 2
+                # d_loss = (d_loss_A + d_loss_B) / 2.0 + (two_step_d_loss_A + two_step_d_loss_B) / 2
+                d_loss = (d_loss_A + d_loss_B) / 2.0
                 self.discriminator_loss_store.append(d_loss.item())
 
                 # Backprop for Discriminator
@@ -271,12 +272,12 @@ class CycleGANTraining:
                 loss["D/d_loss_B_fake"] = d_loss_B_fake.item()
                 loss["D/d_loss_B"] = d_loss_B.item()
                 loss["D/d_loss"] = d_loss.item()
-                loss["D/two_step_d_loss_A_real"] = two_step_d_loss_A_real.item()
-                loss["D/two_step_d_loss_A_fake"] = two_step_d_loss_A_fake.item()
-                loss["D/two_step_d_loss_A"] = two_step_d_loss_A.item()
-                loss["D/two_step_d_loss_B_real"] = two_step_d_loss_B_real.item()
-                loss["D/two_step_d_loss_B_fake"] = two_step_d_loss_B_fake.item()
-                loss["D/two_step_d_loss_B"] = two_step_d_loss_B.item()
+                # loss["D/two_step_d_loss_A_real"] = two_step_d_loss_A_real.item()
+                # loss["D/two_step_d_loss_A_fake"] = two_step_d_loss_A_fake.item()
+                # loss["D/two_step_d_loss_A"] = two_step_d_loss_A.item()
+                # loss["D/two_step_d_loss_B_real"] = two_step_d_loss_B_real.item()
+                # loss["D/two_step_d_loss_B_fake"] = two_step_d_loss_B_fake.item()
+                # loss["D/two_step_d_loss_B"] = two_step_d_loss_B.item()
 
                 if num_iterations % 50 == 0:
                     store_to_file = "Iter:{}\t Generator Loss:{:.4f} Discrimator Loss:{:.4f} \tGA2B:{:.4f} GB2A:{:.4f} G_id:{:.4f} G_cyc:{:.4f} D_A:{:.4f} D_B:{:.4f}".format(
