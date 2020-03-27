@@ -1,14 +1,14 @@
 import os
+import librosa
 import numpy as np
 import argparse
 import torch
 import time
-import librosa
 import pickle
 
 import preprocess
 from trainingDataset import trainingDataset
-from model_VC2 import Generator, Discriminator
+from cyclegan_vc2 import Generator, Discriminator
 
 class CycleGANTest:
     def __init__(self,
