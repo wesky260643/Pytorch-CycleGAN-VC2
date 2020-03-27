@@ -506,6 +506,23 @@ if __name__ == '__main__':
                         help="Output for converted sound Source B", default=output_B_dir_default)
     parser.add_argument('--log_dir', type=str,
                         help="tensorboard log dir", default="./logs")
+    # distribute data parallel args
+    parser.add_argument('--world-size', default=1, type=int,
+                        help='number of nodes for distributed training')
+    parser.add_argument('--rank', default=0, type=int,
+                        help='node rank for distributed training')
+    # parser.add_argument('--dist-url', default='tcp://103.97.83.4:29503', type=str,
+    parser.add_argument('--dist-url', default='tcp://127.0.0.1:30003', type=str,
+                        help='url used to set up distributed training')
+    parser.add_argument('--dist-backend', default='nccl', type=str,
+                        help='distributed backend')
+    parser.add_argument('--gpu', default=None, type=int,
+                        help='GPU id to use.')
+    parser.add_argument('--multiprocessing-distributed', action='store_false',
+                        help='Use multi-processing distributed training to launch '
+                             'N processes per node, which has N GPUs. This is the '
+                             'fastest way to use PyTorch for either single node or '
+                             'multi node data parallel training')
 
     argv = parser.parse_args()
 
@@ -529,8 +546,7 @@ if __name__ == '__main__':
 
     # Check whether following cached files exists
     if not os.path.exists(logf0s_normalization) or not os.path.exists(mcep_normalization):
-        print(
-            "Cached files do not exist, please run the program preprocess_training.py first")
+        print( "Cached files do not exist, please run the program preprocess_training.py first" )
 
     cycleGAN = CycleGANTraining(logf0s_normalization=logf0s_normalization,
                                 mcep_normalization=mcep_normalization,
@@ -543,4 +559,5 @@ if __name__ == '__main__':
                                 output_B_dir=output_B_dir,
                                 restart_training_at=resume_training_at, 
                                 log_dir=argv.log_dir)
+
     cycleGAN.train()
