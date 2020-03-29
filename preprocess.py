@@ -7,12 +7,19 @@ import librosa.display
 import time
 import tqdm
 
+import functools
+print = functools.partial(print, flush=True)
 
-def load_wavs(wav_dir, sr):
+def load_wavs(wav_dir, sr, ignore=None):
     wavs = list()
     print("loading wavs.....")
     for file in tqdm.tqdm(os.listdir(wav_dir)):
         file_path = os.path.join(wav_dir, file)
+        if ignore is not None:
+            if ignore in file_path: 
+                print("ignore file: ", file_path)
+                continue
+        print("processing file: ", file_path)
         wav, _ = librosa.load(file_path, sr=sr, mono=True)
         # wav = wav.astype(np.float64)
         wavs.append(wav)

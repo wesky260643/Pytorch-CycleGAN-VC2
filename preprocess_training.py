@@ -7,6 +7,8 @@ import pickle
 # Custom Classes
 import preprocess
 
+import functools
+print = functools.partial(print, flush=True)
 
 def save_pickle(variable, fileName):
     with open(fileName, 'wb') as f:
@@ -18,16 +20,16 @@ def load_pickle_file(fileName):
         return pickle.load(f)
 
 
-def preprocess_for_training(train_A_dir, train_B_dir, cache_folder):
+def preprocess_for_training(train_A_dir, train_B_dir, cache_folder, ignore_pat=None):
     num_mcep = 36
-    sampling_rate = 16000
+    sampling_rate = 22000
     frame_period = 5.0
     n_frames = 128
 
     print("Starting to prepocess data.......")
     start_time = time.time()
 
-    wavs_A = preprocess.load_wavs(wav_dir=train_A_dir, sr=sampling_rate)
+    wavs_A = preprocess.load_wavs(wav_dir=train_A_dir, sr=sampling_rate, ignore=ignore_pat)
     wavs_B = preprocess.load_wavs(wav_dir=train_B_dir, sr=sampling_rate)
 
     f0s_A, timeaxes_A, sps_A, aps_A, coded_sps_A = preprocess.world_encode_data(
@@ -91,10 +93,11 @@ if __name__ == '__main__':
                         help="Directory for target voice sample", default=train_B_dir_default)
     parser.add_argument('--cache_folder', type=str,
                         help="Store preprocessed data in cache folders", default=cache_folder_default)
+    parser.add_argument("--ignore_pat", type=str, default=None, help="pattern to ignore in train_A_dir")
     argv = parser.parse_args()
 
     train_A_dir = argv.train_A_dir
     train_B_dir = argv.train_B_dir
     cache_folder = argv.cache_folder
 
-    preprocess_for_training(train_A_dir, train_B_dir, cache_folder)
+    preprocess_for_training(train_A_dir, train_B_dir, cache_folder, argv.ignore_pat)

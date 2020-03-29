@@ -46,7 +46,7 @@ class CycleGANTest:
 
     def validation_for_A_dir(self):
         num_mcep = 36
-        sampling_rate = 16000
+        sampling_rate = 22000
         frame_period = 5.0
         n_frames = 128
         validation_A_dir = self.validation_A_dir

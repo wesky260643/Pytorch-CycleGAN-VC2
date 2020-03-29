@@ -2,6 +2,8 @@ from torch.utils.data.dataset import Dataset
 import torch
 import numpy as np
 
+import functools
+print = functools.partial(print, flush=True)
 
 class trainingDataset(Dataset):
     def __init__(self, datasetA, datasetB, n_frames=128):
@@ -14,15 +16,24 @@ class trainingDataset(Dataset):
         dataset_B = self.datasetB
         n_frames = self.n_frames
 
-        self.length = min(len(dataset_A), len(dataset_B))
+        len_A, len_B = len(dataset_A), len(dataset_B)
+        self.length = min(len_A, len_B)
 
-        num_samples = min(len(dataset_A), len(dataset_B))
-        train_data_A_idx = np.arange(len(dataset_A))
-        train_data_B_idx = np.arange(len(dataset_B))
+        num_samples = min(len_A, len_B)
+        train_data_A_idx = np.arange(len_A)
+        train_data_B_idx = np.arange(len_B)
         np.random.shuffle(train_data_A_idx)
         np.random.shuffle(train_data_B_idx)
-        train_data_A_idx_subset = train_data_A_idx[:num_samples]
-        train_data_B_idx_subset = train_data_B_idx[:num_samples]
+        if len_A > len_B:
+            num_rpt = int(len_A / len_B)
+            train_data_A_idx_subset = train_data_A_idx
+            train_data_B_idx_subset = np.append(np.tile(train_data_B_idx, num_rpt), train_data_B_idx[:len_A-len_B*num_rpt])
+        else:
+            num_rpt = int(len_B / len_A)
+            train_data_A_idx_subset = np.append(np.tile(train_data_A_idx, num_rpt), train_data_A_idx[:len_B-len_A*num_rpt])
+            train_data_B_idx_subset = train_data_B_idx
+        # train_data_A_idx_subset = train_data_A_idx[:num_samples]
+        # train_data_B_idx_subset = train_data_B_idx[:num_samples]
 
         train_data_A = list()
         train_data_B = list()
@@ -48,7 +59,8 @@ class trainingDataset(Dataset):
         return train_data_A[index], train_data_B[index]
 
     def __len__(self):
-        return min(len(self.datasetA), len(self.datasetB))
+        # return min(len(self.datasetA), len(self.datasetB))
+        return max(len(self.datasetA), len(self.datasetB))
 
 
 if __name__ == '__main__':
