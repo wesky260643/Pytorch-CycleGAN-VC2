@@ -543,7 +543,7 @@ if __name__ == '__main__':
         os.makedirs(argv.model_checkpoint)
 
     # Check whether following cached files exists
-    if not os.path.exists(logf0s_normalization) or not os.path.exists(argv.mcep_normalization):
+    if not os.path.exists(argv.logf0s_normalization) or not os.path.exists(argv.mcep_normalization):
         print( "Cached files do not exist, please run the program preprocess_training.py first" )
 
     cycleGAN = CycleGANTraining(argv)

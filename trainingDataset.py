@@ -10,8 +10,10 @@ class trainingDataset(Dataset):
         self.datasetA = datasetA
         self.datasetB = datasetB
         self.n_frames = n_frames
+        self.dataset_length = 0
+        self.load_to_mem()
 
-    def __getitem__(self, index):
+    def load_to_mem(self):
         dataset_A = self.datasetA
         dataset_B = self.datasetB
         n_frames = self.n_frames
@@ -35,32 +37,42 @@ class trainingDataset(Dataset):
         # train_data_A_idx_subset = train_data_A_idx[:num_samples]
         # train_data_B_idx_subset = train_data_B_idx[:num_samples]
 
-        train_data_A = list()
-        train_data_B = list()
+        self.train_data_A = list()
+        self.train_data_B = list()
 
         for idx_A, idx_B in zip(train_data_A_idx_subset, train_data_B_idx_subset):
             data_A = dataset_A[idx_A]
             frames_A_total = data_A.shape[1]
-            assert frames_A_total >= n_frames
+            # assert frames_A_total >= n_frames
+            if frames_A_total < n_frames:
+                print("warning: frames_B_total < n_frames")
+                continue
             start_A = np.random.randint(frames_A_total - n_frames + 1)
             end_A = start_A + n_frames
-            train_data_A.append(data_A[:, start_A:end_A])
+            self.train_data_A.append(data_A[:, start_A:end_A])
 
             data_B = dataset_B[idx_B]
             frames_B_total = data_B.shape[1]
-            assert frames_B_total >= n_frames
+            # assert frames_B_total >= n_frames
+            if frames_B_total < n_frames:
+                print("warning: frames_B_total < n_frames")
+                continue
             start_B = np.random.randint(frames_B_total - n_frames + 1)
             end_B = start_B + n_frames
-            train_data_B.append(data_B[:, start_B:end_B])
+            self.train_data_B.append(data_B[:, start_B:end_B])
+            self.dataset_length += 1
 
-        train_data_A = np.array(train_data_A)
-        train_data_B = np.array(train_data_B)
+        self.train_data_A = np.array(self.train_data_A)
+        self.train_data_B = np.array(self.train_data_B)
+        print("--- dataset length --", self.train_data_A.shape, self.train_data_B.shape)
 
-        return train_data_A[index], train_data_B[index]
+    def __getitem__(self, index):
+        return self.train_data_A[index], self.train_data_B[index]
 
     def __len__(self):
         # return min(len(self.datasetA), len(self.datasetB))
-        return max(len(self.datasetA), len(self.datasetB))
+        # return max(len(self.datasetA), len(self.datasetB))
+        return self.dataset_length
 
 
 if __name__ == '__main__':
