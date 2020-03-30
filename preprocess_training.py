@@ -29,13 +29,17 @@ def preprocess_for_training(train_A_dir, train_B_dir, cache_folder, ignore_pat=N
     print("Starting to prepocess data.......")
     start_time = time.time()
 
-    wavs_A = preprocess.load_wavs(wav_dir=train_A_dir, sr=sampling_rate, ignore=ignore_pat)
-    wavs_B = preprocess.load_wavs(wav_dir=train_B_dir, sr=sampling_rate)
+    # wavs_A = preprocess.load_wavs(wav_dir=train_A_dir, sr=sampling_rate, ignore=ignore_pat)
+    # wavs_B = preprocess.load_wavs(wav_dir=train_B_dir, sr=sampling_rate)
 
+    # f0s_A, timeaxes_A, sps_A, aps_A, coded_sps_A = preprocess.world_encode_data(
+    #     wave=wavs_A, fs=sampling_rate, frame_period=frame_period, coded_dim=num_mcep)
+    # f0s_B, timeaxes_B, sps_B, aps_B, coded_sps_B = preprocess.world_encode_data(
+    #     wave=wavs_B, fs=sampling_rate, frame_period=frame_period, coded_dim=num_mcep)
     f0s_A, timeaxes_A, sps_A, aps_A, coded_sps_A = preprocess.world_encode_data(
-        wave=wavs_A, fs=sampling_rate, frame_period=frame_period, coded_dim=num_mcep)
+        wav_dir=train_A_dir, fs=sampling_rate, frame_period=frame_period, coded_dim=num_mcep, ignore=ignore_pat)
     f0s_B, timeaxes_B, sps_B, aps_B, coded_sps_B = preprocess.world_encode_data(
-        wave=wavs_B, fs=sampling_rate, frame_period=frame_period, coded_dim=num_mcep)
+        wav_dir=train_B_dir, fs=sampling_rate, frame_period=frame_period, coded_dim=num_mcep)
 
     log_f0s_mean_A, log_f0s_std_A = preprocess.logf0_statistics(f0s=f0s_A)
     log_f0s_mean_B, log_f0s_std_B = preprocess.logf0_statistics(f0s=f0s_B)

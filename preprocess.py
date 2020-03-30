@@ -6,26 +6,63 @@ from pprint import pprint
 import librosa.display
 import time
 import tqdm
+import queue
+import threading
+from multiprocessing import Process, Manager
 
 import functools
 print = functools.partial(print, flush=True)
 
-def load_wavs(wav_dir, sr, ignore=None):
-    wavs = list()
-    print("loading wavs.....")
-    for file in tqdm.tqdm(os.listdir(wav_dir)):
+def wav_producer(file_list, wave_queue, sr):
+    while True:
+        file_path = file_list.get()
+        if file_path is None:
+            break
+        wav, _ = librosa.load(file_path, sr=sr, mono=True)
+        wave_queue.put(wav)
+        # print("produce a wave file: %s, wave_queue size: %d" % (file_path, wave_queue.qsize()), file_list.qsize())
+    wave_queue.put(None)
+
+def wav_comsumer(wave_queue, wav_res_list, num_producer):
+    while True:
+        wav = wave_queue.get()
+        if wav is None:
+            num_producer -= 1
+        else:
+            wav_res_list.append(wav)
+            # print("comsume from wave_queue and put into wav_res_list size: ", len(wav_res_list))
+        if num_producer == 0:
+            break
+
+def load_wavs(wav_dir, sr, ignore=None, num_thread=128):
+    file_list = queue.Queue()
+    wave_queue = queue.Queue()
+    wav_res_list = list()
+
+    for file in os.listdir(wav_dir):
         file_path = os.path.join(wav_dir, file)
         if ignore is not None:
             if ignore in file_path: 
                 print("ignore file: ", file_path)
                 continue
-        print("processing file: ", file_path)
-        wav, _ = librosa.load(file_path, sr=sr, mono=True)
-        # wav = wav.astype(np.float64)
-        wavs.append(wav)
-    return wavs
+        file_list.put(file_path)
+    print("num of wave files: %d" % (file_list.qsize()))
+    for i in range(num_thread):
+        file_list.put(None)
+    thread_list = list()
+    for i in range(num_thread):
+        producer = threading.Thread(target=wav_producer, args=(file_list, wave_queue, sr, ))
+        thread_list.append(producer)
+        producer.start()
+    consumer = threading.Thread(target=wav_comsumer, args=(wave_queue, wav_res_list, num_thread))
+    thread_list.append(consumer)
+    consumer.start()
+    for t in thread_list:
+        t.join()
+    print("load wave data done: %d wave files in %s" % (len(wav_res_list), wav_dir))
+    return wav_res_list
 
-
+    
 def world_decompose(wav, fs, frame_period=5.0):
     # Decompose speech signal into f0, spectral envelope and aperiodicity using WORLD
     wav = wav.astype(np.float64)
@@ -55,25 +92,106 @@ def world_encode_spectral_envelop(sp, fs, dim=24):
     coded_sp = pyworld.code_spectral_envelope(sp, fs, dim)
     return coded_sp
 
+def world_encode_producer(file_list, encoded_queue, fs, frame_period=5.0, coded_dim=24):
+    while True:
+        file_path = file_list.get()
+        if file_path is None:
+            break
+        wav, _ = librosa.load(file_path, sr=fs, mono=True)
+        f0, timeaxis, sp, ap = world_decompose(wav=wav,
+                                               fs=fs,
+                                               frame_period=frame_period)
+        coded_sp = world_encode_spectral_envelop(sp=sp, fs=fs, dim=coded_dim)
+        # encoded_queue.put((f0, timeaxis, sp, ap))
+        encoded_queue.put((f0, timeaxis, sp, ap, coded_sp))
+        print("world producer: put data into encoded_queue, size of encoded_queue: %d, size of file_list: %d" % (encoded_queue.qsize(), file_list.qsize()))
+    encoded_queue.put(None)
 
-def world_encode_data(wave, fs, frame_period=5.0, coded_dim=24):
+def world_encode_comsumer(encoded_queue, encoded_list, num_producer, fs, coded_dim=24):
+    while True:
+        d_encoded = encoded_queue.get()
+        if d_encoded is None:
+            num_producer -= 1
+        else:
+            # f0, timeaxis, sp, ap = d_encoded[0], d_encoded[1], d_encoded[2], d_encoded[3]
+            # coded_sp = world_encode_spectral_envelop(sp=sp, fs=fs, dim=coded_dim)
+            # encoded_list.append((f0, timeaxis, sp, ap, coded_sp))
+            encoded_list.append(d_encoded)
+            print("world consumer: get item from encoded_queue and put into encoded_list, encoded_list size", len(encoded_list))
+        if num_producer == 0:
+            break
+
+def world_encode_data(wav_dir, fs, frame_period=5.0, coded_dim=24, ignore=None, num_producer=32):
+    # file_list = queue.Queue()
+    # encoded_queue = queue.Queue()
+    stime = time.time()
+    file_list = Manager().Queue()
+    encoded_queue = Manager().Queue()
+    encoded_list = Manager().list()
+    
+    for file in os.listdir(wav_dir):
+        file_path = os.path.join(wav_dir, file)
+        if ignore is not None:
+            if ignore in file_path: 
+                print("ignore file: ", file_path)
+                continue
+        file_list.put(file_path)
+    print("num of wave files: %d" % (file_list.qsize()))
+    for i in range(num_producer):
+        file_list.put(None)
+
+    thread_list = list()
+    for i in range(num_producer):
+        # producer = threading.Thread(target=world_encode_producer, args=(file_list, encoded_queue, fs, frame_period, coded_dim, ))
+        producer = Process(target=world_encode_producer, args=(file_list, encoded_queue, fs, frame_period, coded_dim, ))
+        thread_list.append(producer)
+        producer.start()
+
+    # num_consumer = 20 
+    # for i in range(num_consumer):
+    # consumer = threading.Thread(target=world_encode_comsumer, args=(encoded_queue, encoded_list, num_producer, fs, coded_dim, ))
+    consumer = Process(target=world_encode_comsumer, args=(encoded_queue, encoded_list, num_producer, fs, coded_dim, ))
+    thread_list.append(consumer)
+    consumer.start()
+
+    for t in thread_list:
+        t.join()
+
+    # world_encode_comsumer(encoded_queue, encoded_list, num_producer, fs, coded_dim)
     f0s = list()
     timeaxes = list()
     sps = list()
     aps = list()
     coded_sps = list()
-    print("world encoding data....")
-    for wav in tqdm.tqdm(wave):
-        f0, timeaxis, sp, ap = world_decompose(wav=wav,
-                                               fs=fs,
-                                               frame_period=frame_period)
-        coded_sp = world_encode_spectral_envelop(sp=sp, fs=fs, dim=coded_dim)
+    for item in encoded_list:
+        f0, timeaxis, sp, ap, coded_sp = item[0], item[1], item[2], item[3], item[4]
         f0s.append(f0)
         timeaxes.append(timeaxis)
         sps.append(sp)
         aps.append(ap)
         coded_sps.append(coded_sp)
+    print("num of encoded data from wav files: ", len(encoded_list))
+    etime = time.time()
+    print("world encode time cost: ", etime-stime )
     return f0s, timeaxes, sps, aps, coded_sps
+
+    # f0s = list()
+    # timeaxes = list()
+    # sps = list()
+    # aps = list()
+    # coded_sps = list()
+    # print("world encoding data....")
+    # for wav in tqdm.tqdm(wav_dir):
+    #     f0, timeaxis, sp, ap = world_decompose(wav=wav,
+    #                                            fs=fs,
+    #                                            frame_period=frame_period)
+    #     coded_sp = world_encode_spectral_envelop(sp=sp, fs=fs, dim=coded_dim)
+    #     f0s.append(f0)
+    #     timeaxes.append(timeaxis)
+    #     sps.append(sp)
+    #     aps.append(ap)
+    #     coded_sps.append(coded_sp)
+    # return f0s, timeaxes, sps, aps, coded_sps
 
 
 def logf0_statistics(f0s):
@@ -173,16 +291,20 @@ def sample_train_data(dataset_A, dataset_B, n_frames=128):
 
 if __name__ == '__main__':
     start_time = time.time()
-    wavs = load_wavs("../data/vcc2016_training/SF1/", 16000)
-    # pprint(wavs)
+    # wavs = load_wavs("data/vcc2018_training.speakers/VCC2SF2/", 16000)
+    # # wavs = load_wavs("data/vctk_vcc2018_peppapig/", 16000)
+    # print("load wave data done, num of waves: ", len(wavs))
 
-    f0, timeaxis, sp, ap = world_decompose(wavs[0], 16000, 5.0)
-    print(f0.shape, timeaxis.shape, sp.shape, ap.shape)
+    # f0, timeaxis, sp, ap = world_decompose(wavs[0], 16000, 5.0)
+    # print(f0.shape, timeaxis.shape, sp.shape, ap.shape)
 
-    coded_sp = world_encode_spectral_envelop(sp, 16000, 24)
-    print(coded_sp.shape)
+    # coded_sp = world_encode_spectral_envelop(sp, 16000, 24)
+    # print(coded_sp.shape)
 
-    f0s, timeaxes, sps, aps, coded_sps = world_encode_data(wavs, 16000, 5, 24)
+    f0s, timeaxes, sps, aps, coded_sps = world_encode_data("data/tmp/", 16000, 5, 24)
+    # f0s, timeaxes, sps, aps, coded_sps = world_encode_data(wavs, 16000, 5, 24)
+    print("size of sps: ", len(sps))
+    exit(0)
     # print(f0s)
 
     log_f0_mean, log_f0_std = logf0_statistics(f0s)
