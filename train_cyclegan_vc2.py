@@ -356,9 +356,12 @@ class CycleGANTraining:
                                                                 ap=ap,
                                                                 fs=sampling_rate,
                                                                 frame_period=frame_period)
-            librosa.output.write_wav(path=os.path.join(output_A_dir, os.path.basename(file)),
-                                     y=wav_transformed,
-                                     sr=sampling_rate)
+            try:
+                librosa.output.write_wav(path=os.path.join(output_A_dir, os.path.basename(file)),
+                                         y=wav_transformed,
+                                         sr=sampling_rate)
+            except:
+                print("write wave file error")
 
     def validation_for_B_dir(self):
         num_mcep = 36
@@ -410,9 +413,12 @@ class CycleGANTraining:
                                                                 ap=ap,
                                                                 fs=sampling_rate,
                                                                 frame_period=frame_period)
-            librosa.output.write_wav(path=os.path.join(output_B_dir, os.path.basename(file)),
-                                     y=wav_transformed,
-                                     sr=sampling_rate)
+            try:
+                librosa.output.write_wav(path=os.path.join(output_B_dir, os.path.basename(file)),
+                                         y=wav_transformed,
+                                         sr=sampling_rate)
+            except:
+                print("write wave file error")
 
     def savePickle(self, variable, fileName):
         with open(fileName, 'wb') as f:
