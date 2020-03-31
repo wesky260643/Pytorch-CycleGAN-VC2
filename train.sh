@@ -3,7 +3,7 @@
 # @File Name : train.sh
 # @Purpose :
 # @Creation Date : 2020-03-21 15:12:49
-# @Last Modified : 2020-03-31 17:55:10
+# @Last Modified : 2020-03-31 17:58:20
 # @Created By :  chenjiang
 # @Modified By : chenjiang
 
@@ -51,7 +51,7 @@ valid_B_dir="data/vcc2018_training.speakers/VCC2TM1/"
 # valid_B_dir="data/vctk_sub/p256/"
 
 save_interval=100
-if [ ${cache_dir} == *"all_"* ];then
+if [[ "${cache_dir}" == *"all_"* ]];then
     save_interval=10
 fi
 
