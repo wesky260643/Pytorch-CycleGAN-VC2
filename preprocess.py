@@ -8,7 +8,7 @@ import time
 import tqdm
 import queue
 import threading
-from multiprocessing import Process, Manager
+from multiprocessing import Process, Manager, Queue
 
 import functools
 print = functools.partial(print, flush=True)
@@ -118,10 +118,12 @@ def world_encode_comsumer(encoded_queue, encoded_list, num_producer, fs, coded_d
             # encoded_list.append((f0, timeaxis, sp, ap, coded_sp))
             encoded_list.append(d_encoded)
             print("world consumer: get item from encoded_queue and put into encoded_list, encoded_list size", len(encoded_list))
+            # encoded_list.put(d_encoded)
+            # print("world consumer: get item from encoded_queue and put into encoded_list, encoded_list size", encoded_list.qsize())
         if num_producer == 0:
             break
 
-def world_encode_data(wav_dir, fs, frame_period=5.0, coded_dim=24, ignore=None, num_producer=32):
+def world_encode_data(wav_dir, fs, frame_period=5.0, coded_dim=24, ignore=None, num_producer=64):
     # file_list = queue.Queue()
     # encoded_queue = queue.Queue()
     stime = time.time()
@@ -129,12 +131,7 @@ def world_encode_data(wav_dir, fs, frame_period=5.0, coded_dim=24, ignore=None, 
     encoded_queue = Manager().Queue()
     encoded_list = Manager().list()
     
-    for file in os.listdir(wav_dir):
-        file_path = os.path.join(wav_dir, file)
-        if ignore is not None:
-            if ignore in file_path: 
-                print("ignore file: ", file_path)
-                continue
+    for file_path in wav_dir:
         file_list.put(file_path)
     print("num of wave files: %d" % (file_list.qsize()))
     for i in range(num_producer):
@@ -156,6 +153,8 @@ def world_encode_data(wav_dir, fs, frame_period=5.0, coded_dim=24, ignore=None, 
 
     for t in thread_list:
         t.join()
+    for t in thread_list:
+        t.terminate()
 
     # world_encode_comsumer(encoded_queue, encoded_list, num_producer, fs, coded_dim)
     f0s = list()
@@ -163,14 +162,16 @@ def world_encode_data(wav_dir, fs, frame_period=5.0, coded_dim=24, ignore=None, 
     sps = list()
     aps = list()
     coded_sps = list()
-    for item in encoded_list:
+    # for item in encoded_list:
+    print("num of encoded data from wav files: ", len(encoded_list))
+    while len(encoded_list) > 0:
+        item = encoded_list.pop()
         f0, timeaxis, sp, ap, coded_sp = item[0], item[1], item[2], item[3], item[4]
         f0s.append(f0)
         timeaxes.append(timeaxis)
         sps.append(sp)
         aps.append(ap)
         coded_sps.append(coded_sp)
-    print("num of encoded data from wav files: ", len(encoded_list))
     etime = time.time()
     print("world encode time cost: ", etime-stime )
     return f0s, timeaxes, sps, aps, coded_sps
@@ -302,6 +303,7 @@ if __name__ == '__main__':
     # print(coded_sp.shape)
 
     f0s, timeaxes, sps, aps, coded_sps = world_encode_data("data/tmp/", 16000, 5, 24)
+    # f0s, timeaxes, sps, aps, coded_sps = world_encode_data("data/vcc2018_training.speakers/VCC2SF2/", 16000, 5, 24)
     # f0s, timeaxes, sps, aps, coded_sps = world_encode_data(wavs, 16000, 5, 24)
     print("size of sps: ", len(sps))
     exit(0)

@@ -36,10 +36,51 @@ def preprocess_for_training(train_A_dir, train_B_dir, cache_folder, ignore_pat=N
     #     wave=wavs_A, fs=sampling_rate, frame_period=frame_period, coded_dim=num_mcep)
     # f0s_B, timeaxes_B, sps_B, aps_B, coded_sps_B = preprocess.world_encode_data(
     #     wave=wavs_B, fs=sampling_rate, frame_period=frame_period, coded_dim=num_mcep)
-    f0s_A, timeaxes_A, sps_A, aps_A, coded_sps_A = preprocess.world_encode_data(
-        wav_dir=train_A_dir, fs=sampling_rate, frame_period=frame_period, coded_dim=num_mcep, ignore=ignore_pat)
-    f0s_B, timeaxes_B, sps_B, aps_B, coded_sps_B = preprocess.world_encode_data(
-        wav_dir=train_B_dir, fs=sampling_rate, frame_period=frame_period, coded_dim=num_mcep)
+    wave_file_list_A = list()
+    for file in os.listdir(train_A_dir):
+        file_path = os.path.join(train_A_dir, file)
+        if ignore_pat is not None:
+            if ignore_pat in file_path: 
+                print("ignore file: ", file_path)
+                continue
+        wave_file_list_A.append(file_path)
+    if len(wave_file_list_A) > 3000 * 4:
+        f0s_A, timeaxes_A, sps_A, aps_A, coded_sps_A = list(), list(), list(), list(), list()
+        for sub in range(int(len(wave_file_list_A) / 3000)):
+            sub_start = sub * 3000
+            sub_end = min(sub_start + 3000, len(wave_file_list_A))
+            tmp_f0s_A, tmp_timeaxes_A, tmp_sps_A, tmp_aps_A, tmp_coded_sps_A = preprocess.world_encode_data(
+                    wav_dir=wave_file_list_A[sub_start:sub_end], fs=sampling_rate, frame_period=frame_period, coded_dim=num_mcep, ignore=ignore_pat)
+            f0s_A.extend(tmp_f0s_A)
+            timeaxes_A.extend(tmp_timeaxes_A)
+            sps_A.extend(tmp_sps_A)
+            aps_A.extend(tmp_aps_A)
+            coded_sps_A .extend(tmp_coded_sps_A)
+
+    else:
+        f0s_A, timeaxes_A, sps_A, aps_A, coded_sps_A = preprocess.world_encode_data(
+            wav_dir=wave_file_list_A, fs=sampling_rate, frame_period=frame_period, coded_dim=num_mcep, ignore=ignore_pat)
+    print("world_encode_data ok. f0s_A: %d" % (len(f0s_A)))
+    
+    wave_file_list_B = list()
+    for file in os.listdir(train_B_dir):
+        file_path = os.path.join(train_B_dir, file)
+        wave_file_list_B.append(file_path)
+    if len(wave_file_list_B) > 3000 * 4:
+        f0s_B, timeaxes_B, sps_B, aps_B, coded_sps_B = list(), list(), list(), list(), list()
+        for sub in range(int(len(wave_file_list_B) / 3000)):
+            sub_start = sub * 3000
+            sub_end = sub * 3000
+            tmp_f0s_B, tmp_timeaxes_B, tmp_sps_B, tmp_aps_B, tmp_coded_sps_B = preprocess.world_encode_data(
+                wav_dir=wave_file_list_B, fs=sampling_rate, frame_period=frame_period, coded_dim=num_mcep)
+            f0s_B.extend(tmp_f0s_B)
+            timeaxes_B.extend(tmp_timeaxes_B)
+            sps_B.extend(tmp_sps_B)
+            aps_B.extend(tmp_aps_B)
+            coded_sps_B.extend(tmp_coded_sps_B)
+    else:
+        f0s_B, timeaxes_B, sps_B, aps_B, coded_sps_B = preprocess.world_encode_data(
+            wav_dir=wave_file_list_B, fs=sampling_rate, frame_period=frame_period, coded_dim=num_mcep)
 
     log_f0s_mean_A, log_f0s_std_A = preprocess.logf0_statistics(f0s=f0s_A)
     log_f0s_mean_B, log_f0s_std_B = preprocess.logf0_statistics(f0s=f0s_B)

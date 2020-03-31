@@ -11,85 +11,104 @@ from trainingDataset import trainingDataset
 from cyclegan_vc2 import Generator, Discriminator
 from logger import Logger
 
+import torch.multiprocessing as mp
+import torch.distributed as dist
+import torch.utils.data.distributed
+
+import horovod.torch as hvd
+
 import functools
 print = functools.partial(print, flush=True)
 
+
+hvd.init()
+
 class CycleGANTraining:
-    def __init__(self, argv):
+    def __init__(self, args):
         self.start_epoch = 0
-        self.num_epochs = argv.num_epochs
-        self.mini_batch_size = argv.batch_size
-        self.dataset_A = self.loadPickleFile(argv.coded_sps_A_norm)
-        self.dataset_B = self.loadPickleFile(argv.coded_sps_B_norm)
+        self.num_epochs = args.num_epochs
+        self.batch_size = args.batch_size
+        self.dataset_A = self.loadPickleFile(args.coded_sps_A_norm)
+        self.dataset_B = self.loadPickleFile(args.coded_sps_B_norm)
         self.device = torch.device(
             'cuda' if torch.cuda.is_available() else 'cpu')
 
         # Speech Parameters
-        logf0s_normalization = np.load(argv.logf0s_normalization)
+        logf0s_normalization = np.load(args.logf0s_normalization)
         self.log_f0s_mean_A = logf0s_normalization['mean_A']
         self.log_f0s_std_A = logf0s_normalization['std_A']
         self.log_f0s_mean_B = logf0s_normalization['mean_B']
         self.log_f0s_std_B = logf0s_normalization['std_B']
 
-        mcep_normalization = np.load(argv.mcep_normalization)
+        mcep_normalization = np.load(args.mcep_normalization)
         self.coded_sps_A_mean = mcep_normalization['mean_A']
         self.coded_sps_A_std = mcep_normalization['std_A']
         self.coded_sps_B_mean = mcep_normalization['mean_B']
         self.coded_sps_B_std = mcep_normalization['std_B']
 
         # Generator and Discriminator
-        self.generator_A2B = Generator().to(self.device)
-        self.generator_B2A = Generator().to(self.device)
+        self.generator_A2B = Generator()
+        self.generator_B2A = Generator()
         # self.generator_B2A = self.generator_A2B 
-        self.discriminator_A = Discriminator().to(self.device)
-        self.discriminator_B = Discriminator().to(self.device)
+        self.discriminator_A = Discriminator()
+        self.discriminator_B = Discriminator()
         # self.discriminator_B = self.discriminator_A 
 
         # Loss Functions
         criterion_mse = torch.nn.MSELoss()
 
         # Optimizer
-        g_params = list(self.generator_A2B.parameters()) + \
-            list(self.generator_B2A.parameters())
-        d_params = list(self.discriminator_A.parameters()) + \
-            list(self.discriminator_B.parameters())
+        self.g_params = list(self.generator_A2B.parameters()) + \
+                list(self.generator_B2A.parameters())
+        self.d_params = list(self.discriminator_A.parameters()) + \
+                list(self.discriminator_B.parameters())
+        self.g_named_params = list()
+        for nparam in self.generator_A2B.named_parameters(prefix="g_a2b"):
+            self.g_named_params.append(nparam)
+        for nparam in self.generator_B2A.named_parameters(prefix="g_b2a"):
+            self.g_named_params.append(nparam)
+        self.d_named_params = list()
+        for nparam in self.discriminator_A.named_parameters(prefix="d_a"):
+            self.d_named_params.append(nparam)
+        for nparam in self.discriminator_B.named_parameters(prefix="d_b"):
+            self.d_named_params.append(nparam)
 
         # Initial learning rates
-        self.generator_lr = argv.generator_lr
-        self.discriminator_lr = argv.discriminator_lr
+        self.generator_lr = args.generator_lr
+        self.discriminator_lr = args.discriminator_lr
 
         # Learning rate decay
         self.generator_lr_decay = self.generator_lr / 200000
         self.discriminator_lr_decay = self.discriminator_lr / 200000
 
         # Starts learning rate decay from after this many iterations have passed
-        self.start_decay = argv.start_decay
+        self.start_decay = args.start_decay
 
         self.generator_optimizer = torch.optim.Adam(
-            g_params, lr=self.generator_lr, betas=(argv.beta1, argv.beta2))
+            self.g_params, lr=self.generator_lr, betas=(args.beta1, args.beta2))
         self.discriminator_optimizer = torch.optim.Adam(
-            d_params, lr=self.discriminator_lr, betas=(argv.beta1, argv.beta2))
+            self.d_params, lr=self.discriminator_lr, betas=(args.beta1, args.beta2))
 
         # To Load save previously saved models
-        self.modelCheckpoint = argv.model_checkpoint
+        self.modelCheckpoint = args.model_checkpoint
 
         # Validation set Parameters
-        self.validation_A_dir = argv.validation_A_dir
-        self.output_A_dir = argv.output_A_dir
-        self.validation_B_dir = argv.validation_B_dir
-        self.output_B_dir = argv.output_B_dir
+        self.validation_A_dir = args.validation_A_dir
+        self.output_A_dir = args.output_A_dir
+        self.validation_B_dir = args.validation_B_dir
+        self.output_B_dir = args.output_B_dir
 
         # Storing Discriminatior and Generator Loss
         self.generator_loss_store = []
         self.discriminator_loss_store = []
 
         self.file_name = 'log_store_non_sigmoid.txt'
-        self.log_dir = argv.log_dir
+        self.log_dir = args.log_dir
         self.logger = Logger(self.log_dir)
 
-        if argv.resume_training_at is not None:
+        if args.resume_training_at is not None:
             # Training will resume from previous checkpoint
-            self.start_epoch = self.loadModel(argv.resume_training_at)
+            self.start_epoch = self.loadModel(args.resume_training_at)
             print("Training resumed")
 
     def adjust_lr_rate(self, optimizer, name='generator'):
@@ -110,29 +129,68 @@ class CycleGANTraining:
 
     def train(self):
         # Training Begins
-        for epoch in range(self.start_epoch, self.num_epochs):
-            start_time_epoch = time.time()
+        torch.manual_seed(args.seed)
+        dataset = trainingDataset(datasetA=self.dataset_A,
+                                  datasetB=self.dataset_B,
+                                  n_frames=128)
+        if args.distributed:
+            print("------------------- horovod traing setting ----------------")
+            print("count of gpu available:", torch.cuda.device_count())
+            torch.cuda.set_device(hvd.local_rank())
 
+            self.generator_A2B = self.generator_A2B.cuda()
+            self.generator_B2A = self.generator_B2A.cuda()
+            self.discriminator_A = self.discriminator_A.cuda()
+            self.discriminator_B = self.discriminator_B.cuda()
+
+            train_sampler = torch.utils.data.distributed.DistributedSampler(dataset, num_replicas=hvd.size(), rank=hvd.rank())
+
+            self.generator_optimizer = hvd.DistributedOptimizer(self.generator_optimizer, 
+                    named_parameters=self.g_named_params, 
+                    compression=hvd.Compression.fp16)
+            self.discriminator_optimizer = hvd.DistributedOptimizer(self.discriminator_optimizer, 
+                    named_parameters=self.d_named_params, 
+                    compression=hvd.Compression.fp16)
+
+            hvd.broadcast_parameters(self.generator_A2B.state_dict(), root_rank=0)
+            hvd.broadcast_parameters(self.generator_B2A.state_dict(), root_rank=0)
+            hvd.broadcast_parameters(self.discriminator_A.state_dict(), root_rank=0)
+            hvd.broadcast_parameters(self.discriminator_B.state_dict(), root_rank=0)
+
+            hvd.broadcast_optimizer_state(self.generator_optimizer, root_rank=0)
+            hvd.broadcast_optimizer_state(self.discriminator_optimizer, root_rank=0)
+        else:
+            self.generator_A2B = self.generator_A2B.to(self.device)
+            self.generator_B2A = self.generator_B2A.to(self.device)
+            self.discriminator_A = self.discriminator_A.to(self.device)
+            self.discriminator_B = self.discriminator_B.to(self.device)
+
+            train_sampler = None
+        train_loader = torch.utils.data.DataLoader(dataset=dataset,
+                                                   batch_size=self.batch_size,
+                                                   shuffle=(train_sampler is None),
+                                                   drop_last=False,
+                                                   pin_memory=True, 
+                                                   sampler=train_sampler)
+        for epoch in range(self.start_epoch, self.num_epochs):
+            self.generator_A2B.train()
+            self.generator_B2A.train()
+            self.discriminator_A.train()
+            self.discriminator_B.train()
+
+            train_sampler.set_epoch(epoch)
+            start_time_epoch = time.time()
             # Constants
-            cycle_loss_lambda = argv.cycle_loss_lambda
-            identity_loss_lambda = argv.identity_loss_lambda
-            #if epoch>20:#
-                #cycle_loss_lambda = 15#
-                #identity_loss_lambda = 0#
+            cycle_loss_lambda = args.cycle_loss_lambda
+            identity_loss_lambda = args.identity_loss_lambda
 
             # Preparing Dataset
             n_samples = len(self.dataset_A)
-
-            dataset = trainingDataset(datasetA=self.dataset_A,
-                                      datasetB=self.dataset_B,
-                                      n_frames=128)
-            train_loader = torch.utils.data.DataLoader(dataset=dataset,
-                                                       batch_size=self.mini_batch_size,
-                                                       shuffle=True,
-                                                       drop_last=False)
+            
             for i, (real_A, real_B) in enumerate(train_loader):
+                # print("--------------- data size --------------", real_A.size(), real_B.size())
                 num_iterations = (
-                    n_samples // self.mini_batch_size) * epoch + i
+                    n_samples // self.batch_size) * epoch + i
                 # print("iteration no: ", num_iterations, epoch)
                 if num_iterations > 10000:
                     identity_loss_lambda = 0
@@ -142,8 +200,10 @@ class CycleGANTraining:
                     self.adjust_lr_rate(
                         self.generator_optimizer, name='discriminator')
 
-                real_A = real_A.to(self.device).float()
-                real_B = real_B.to(self.device).float()
+                # real_A = real_A.to(self.device).float()
+                # real_B = real_B.to(self.device).float()
+                real_A = real_A.cuda().float()
+                real_B = real_B.cuda().float()
 
                 # Generator Loss function
 
@@ -185,7 +245,9 @@ class CycleGANTraining:
                 self.generator_loss_store.append(generator_loss.item())
 
                 # Backprop for Generator
-                self.reset_grad()
+                # self.reset_grad()
+                self.generator_optimizer.synchronize()
+                self.generator_optimizer.zero_grad()
                 generator_loss.backward()
                 # if num_iterations > self.start_decay:  # Linearly decay learning rate
                 #     self.adjust_lr_rate(
@@ -247,7 +309,9 @@ class CycleGANTraining:
                 self.discriminator_loss_store.append(d_loss.item())
 
                 # Backprop for Discriminator
-                self.reset_grad()
+                # self.reset_grad()
+                self.discriminator_optimizer.synchronize()
+                self.discriminator_optimizer.zero_grad()
                 d_loss.backward()
 
                 # if num_iterations > self.start_decay:  # Linearly decay learning rate
@@ -280,10 +344,10 @@ class CycleGANTraining:
                     for tag, value in loss.items():
                         self.logger.scalar_summary(tag, value, num_iterations + 1)
             end_time = time.time()
-            store_to_file = "Epoch: {} Generator Loss: {:.4f} Discriminator Loss: {}, Time: {:.2f}\n\n".format(
+            store_to_file = "Epoch: {} Generator Loss: {:.4f} Discriminator Loss: {}, Time: {:.2f}\n".format(
                 epoch, generator_loss.item(), d_loss.item(), end_time - start_time_epoch)
             self.store_to_file(store_to_file)
-            print("Epoch: {} Generator Loss: {:.4f} Discriminator Loss: {}, Time: {:.2f}\n\n".format(
+            print("Epoch: {} Generator Loss: {:.4f} Discriminator Loss: {}, Time: {:.2f}\n".format(
                 epoch, generator_loss.item(), d_loss.item(), end_time - start_time_epoch))
 
             if epoch % 100 == 0 and epoch != 0:
@@ -512,40 +576,46 @@ if __name__ == '__main__':
     parser.add_argument("--start_decay", default=12500, type=int, help="num of iterations to decay G_lr and D_lr")
     parser.add_argument("--beta1", default=0.5, type=float, help="beta1 for Adam optimizer")
     parser.add_argument("--beta2", default=0.999, type=float, help="beta2 for Adam optimizer")
+    parser.add_argument("--seed", default=20, type=int, help="random seed")
     
     # distribute data parallel args
-    parser.add_argument('--world-size', default=1, type=int,
+    parser.add_argument('--world_size', default=1, type=int,
                         help='number of nodes for distributed training')
     parser.add_argument('--rank', default=0, type=int,
                         help='node rank for distributed training')
     # parser.add_argument('--dist-url', default='tcp://103.97.83.4:29503', type=str,
-    parser.add_argument('--dist-url', default='tcp://127.0.0.1:30003', type=str,
+    parser.add_argument('--dist_url', default='tcp://127.0.0.1:30003', type=str,
                         help='url used to set up distributed training')
-    parser.add_argument('--dist-backend', default='nccl', type=str,
+    parser.add_argument('--dist_backend', default='nccl', type=str,
                         help='distributed backend')
     parser.add_argument('--gpu', default=None, type=int,
                         help='GPU id to use.')
-    parser.add_argument('--multiprocessing-distributed', action='store_false',
+    parser.add_argument('--multiprocessing_distributed', action='store_false',
                         help='Use multi-processing distributed training to launch '
                              'N processes per node, which has N GPUs. This is the '
                              'fastest way to use PyTorch for either single node or '
                              'multi node data parallel training')
-    argv = parser.parse_args()
+    args = parser.parse_args()
+    args.distributed = args.world_size > 1 or args.multiprocessing_distributed
     print("-" * 30 + "train args" + "-"*30)
-    print(argv)
+    print(args)
     print("-" * 30 + "train args" + "-"*30)
     
-    if not os.path.exists(argv.output_A_dir):
-        os.makedirs(argv.output_A_dir)
-    if not os.path.exists(argv.output_B_dir):
-        os.makedirs(argv.output_B_dir)
-    if not os.path.exists(argv.model_checkpoint):
-        os.makedirs(argv.model_checkpoint)
+    if not os.path.exists(args.output_A_dir):
+        os.makedirs(args.output_A_dir)
+    if not os.path.exists(args.output_B_dir):
+        os.makedirs(args.output_B_dir)
+    if not os.path.exists(args.model_checkpoint):
+        os.makedirs(args.model_checkpoint)
 
     # Check whether following cached files exists
-    if not os.path.exists(argv.logf0s_normalization) or not os.path.exists(argv.mcep_normalization):
+    if not os.path.exists(args.logf0s_normalization) or not os.path.exists(args.mcep_normalization):
         print( "Cached files do not exist, please run the program preprocess_training.py first" )
 
-    cycleGAN = CycleGANTraining(argv)
-
+    cycleGAN = CycleGANTraining(args)
     cycleGAN.train()
+    
+
+
+
+
