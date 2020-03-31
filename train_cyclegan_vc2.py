@@ -187,6 +187,7 @@ class CycleGANTraining:
             # Preparing Dataset
             n_samples = len(self.dataset_A)
             
+            time_iter_start = time.time()
             for i, (real_A, real_B) in enumerate(train_loader):
                 # print("--------------- data size --------------", real_A.size(), real_B.size())
                 num_iterations = (
@@ -334,11 +335,13 @@ class CycleGANTraining:
                 # loss["D/two_step_d_loss_B_fake"] = two_step_d_loss_B_fake.item()
                 # loss["D/two_step_d_loss_B"] = two_step_d_loss_B.item()
 
-                if num_iterations % 50 == 0:
-                    store_to_file = "Iter:{}\t Generator Loss:{:.4f} Discrimator Loss:{:.4f} \tGA2B:{:.4f} GB2A:{:.4f} G_id:{:.4f} G_cyc:{:.4f} D_A:{:.4f} D_B:{:.4f}".format(
-                        num_iterations, generator_loss.item(), d_loss.item(), generator_loss_A2B, generator_loss_B2A, identiyLoss, cycleLoss, d_loss_A, d_loss_B)
-                    print("Iter:{}\t Generator Loss:{:.4f} Discrimator Loss:{:.4f} \tGA2B:{:.4f} GB2A:{:.4f} G_id:{:.4f} G_cyc:{:.4f} D_A:{:.4f} D_B:{:.4f}".format(
-                        num_iterations, generator_loss.item(), d_loss.item(), generator_loss_A2B, generator_loss_B2A, identiyLoss, cycleLoss, d_loss_A, d_loss_B))
+                if num_iterations % 10 == 0:
+                    iter_time_cost = time.time() - time_iter_start
+                    time_iter_start = time.time()
+                    store_to_file = "Iter:{}/{}\t Generator Loss:{:.4f} Discrimator Loss:{:.4f} \tGA2B:{:.4f} GB2A:{:.4f} G_id:{:.4f} G_cyc:{:.4f} D_A:{:.4f} D_B:{:.4f} Time:{:.4f}".format(
+                        num_iterations, self.num_epochs * n_samples // self.batch_size, generator_loss.item(), d_loss.item(), generator_loss_A2B, generator_loss_B2A, identiyLoss, cycleLoss, d_loss_A, d_loss_B, iter_time_cost)
+                    print("Iter:{}/{}\t Generator Loss:{:.4f} Discrimator Loss:{:.4f} \tGA2B:{:.4f} GB2A:{:.4f} G_id:{:.4f} G_cyc:{:.4f} D_A:{:.4f} D_B:{:.4f} Time:{:.4f}".format(
+                        num_iterations, self.num_epochs * n_samples // self.batch_size, generator_loss.item(), d_loss.item(), generator_loss_A2B, generator_loss_B2A, identiyLoss, cycleLoss, d_loss_A, d_loss_B, iter_time_cost))
                     self.store_to_file(store_to_file)
                 if num_iterations % 10 == 0:
                     for tag, value in loss.items():
@@ -350,7 +353,7 @@ class CycleGANTraining:
             print("Epoch: {} Generator Loss: {:.4f} Discriminator Loss: {}, Time: {:.2f}\n".format(
                 epoch, generator_loss.item(), d_loss.item(), end_time - start_time_epoch))
 
-            if epoch % args.save_interval == 0 and epoch != 0:
+            if epoch % args.save_interval == 0:
                 # Save the Entire model
                 print("Saving model Checkpoint  ......")
                 store_to_file = "Saving model Checkpoint  ......"
@@ -358,7 +361,7 @@ class CycleGANTraining:
                 self.saveModelCheckPoint(epoch, '{}'.format(self.modelCheckpoint + '_CycleGAN_CheckPoint.ep' + str(epoch)))
                 print("Model Saved!")
 
-            if epoch % args.save_interval == 0 and epoch != 0:
+            if epoch % args.save_interval == 0:
                 # Validation Set
                 validation_start_time = time.time()
                 self.validation_for_A_dir()
