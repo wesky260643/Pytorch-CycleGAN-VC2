@@ -3,7 +3,7 @@
 # @File Name : train.sh
 # @Purpose :
 # @Creation Date : 2020-03-21 15:12:49
-# @Last Modified : 2020-03-31 12:45:46
+# @Last Modified : 2020-03-31 17:44:34
 # @Created By :  chenjiang
 # @Modified By : chenjiang
 
@@ -32,9 +32,27 @@ train_B_dir="data/vcc2018_training.speakers/VCC2TM1/"
 valid_A_dir="data/vcc2018_training.speakers/VCC2SF3"
 valid_B_dir="data/vcc2018_training.speakers/VCC2TM1/"
 
-# python preprocess_training.py --train_A_dir ${train_A_dir} \
-#                               --train_B_dir ${train_B_dir} \
-#                               --cache_folder ${cache_dir} 
+# cache_dir="data/cache_check.all_tm1/"
+# train_A_dir="data/vctk_vcc2018_peppapig/"
+# train_B_dir="data/vcc2018_training.speakers/VCC2TM1/"
+# valid_A_dir="data/vctk_vcc2018_peppapig/"
+# valid_B_dir="data/vcc2018_training.speakers/VCC2TM1/"
+
+# cache_dir="data/cache_check.sf3_peppapigen/"
+# train_A_dir="data/vcc2018_training.speakers/VCC2SF3/"
+# train_B_dir="data/voice_material_new/PeppaPig_en"
+# valid_A_dir="data/vcc2018_training.speakers/VCC2SF3/"
+# valid_B_dir="data/voice_material_new/PeppaPig_en"
+
+# cache_dir="data/cache_check.p270_p256/"
+# train_A_dir="data/vctk_sub/p270/"
+# train_B_dir="data/vctk_sub/p256/"
+# valid_A_dir="data/vctk_sub/p270/"
+# valid_B_dir="data/vctk_sub/p256/"
+
+python preprocess_training.py --train_A_dir ${train_A_dir} \
+                              --train_B_dir ${train_B_dir} \
+                              --cache_folder ${cache_dir} 
 
 
 python train_cyclegan_vc2.py --logf0s_normalization   ${cache_dir}/logf0s_normalization.npz \
