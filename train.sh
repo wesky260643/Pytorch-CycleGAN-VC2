@@ -3,7 +3,7 @@
 # @File Name : train.sh
 # @Purpose :
 # @Creation Date : 2020-03-21 15:12:49
-# @Last Modified : 2020-04-01 11:20:40
+# @Last Modified : 2020-04-01 11:34:25
 # @Created By :  chenjiang
 # @Modified By : chenjiang
 
@@ -28,6 +28,12 @@
 
 # cache_dir="data/cache_check.sf3_tm1.test"
 # train_A_dir="data/vcc2018_training.speakers/VCC2SF3"
+# train_B_dir="data/vcc2018_training.speakers/VCC2TM1/"
+# valid_A_dir="data/vcc2018_training.speakers/VCC2SF3"
+# valid_B_dir="data/vcc2018_training.speakers/VCC2TM1/"
+
+# cache_dir="data/cache_check.all_tm1/"
+# train_A_dir="data/vctk_vcc2018_peppapig/"
 # train_B_dir="data/vcc2018_training.speakers/VCC2TM1/"
 # valid_A_dir="data/vcc2018_training.speakers/VCC2SF3"
 # valid_B_dir="data/vcc2018_training.speakers/VCC2TM1/"
