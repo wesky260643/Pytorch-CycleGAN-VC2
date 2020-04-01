@@ -3,7 +3,7 @@
 # @File Name : train.sh
 # @Purpose :
 # @Creation Date : 2020-03-21 15:12:49
-# @Last Modified : 2020-04-01 11:34:25
+# @Last Modified : 2020-04-01 12:38:43
 # @Created By :  chenjiang
 # @Modified By : chenjiang
 
@@ -82,7 +82,7 @@ python train_cyclegan_vc2.py --logf0s_normalization   ${cache_dir}/logf0s_normal
                              --output_B_dir           ${cache_dir}/converted_sound/p228/ \
                              --log_dir                ${cache_dir}/logs \
                              --save_interval ${save_interval} \
-                             --resume_training_at ${cache_dir}/model_checkpoint/_CycleGAN_CheckPoint.ep2
+                             # --resume_training_at ${cache_dir}/model_checkpoint/_CycleGAN_CheckPoint.ep2
                              # --resume_training_at     ${cache_dir}/model_checkpoint/_CycleGAN_CheckPoint \
 
 
