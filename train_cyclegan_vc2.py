@@ -171,7 +171,7 @@ class CycleGANTraining:
                                                    shuffle=(train_sampler is None),
                                                    drop_last=False,
                                                    pin_memory=True, 
-                                                   num_workers=16, 
+                                                   num_workers=args.num_workers, 
                                                    sampler=train_sampler)
         for epoch in range(self.start_epoch, self.num_epochs):
             self.generator_A2B.train()
@@ -588,6 +588,7 @@ if __name__ == '__main__':
     parser.add_argument("--beta2", default=0.999, type=float, help="beta2 for Adam optimizer")
     parser.add_argument("--seed", default=20, type=int, help="random seed")
     parser.add_argument("--save_interval", default=100, type=int, help=" model checkPoint save interval")
+    parser.add_argument("--num_workers", default=16, type=int, help="num of workers to load data")
     
     # distribute data parallel args
     parser.add_argument('--world_size', default=1, type=int,
