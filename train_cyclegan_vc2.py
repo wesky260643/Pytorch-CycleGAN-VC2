@@ -106,7 +106,7 @@ class CycleGANTraining:
         self.log_dir = args.log_dir
         self.logger = Logger(self.log_dir)
 
-        if args.resume_training_at is not None:
+        if args.resume_training_at is not None and hvd.rank() == 0:
             # Training will resume from previous checkpoint
             self.start_epoch = self.loadModel(args.resume_training_at)
             print("Training resumed")
@@ -171,6 +171,7 @@ class CycleGANTraining:
                                                    shuffle=(train_sampler is None),
                                                    drop_last=False,
                                                    pin_memory=True, 
+                                                   num_workers=args.num_workers, 
                                                    sampler=train_sampler)
         for epoch in range(self.start_epoch, self.num_epochs):
             self.generator_A2B.train()
@@ -353,7 +354,7 @@ class CycleGANTraining:
             print("Epoch: {} Generator Loss: {:.4f} Discriminator Loss: {}, Time: {:.2f}\n".format(
                 epoch, generator_loss.item(), d_loss.item(), end_time - start_time_epoch))
 
-            if epoch % args.save_interval == 0:
+            if epoch % args.save_interval == 0 and hvd.rank() == 0:
                 # Save the Entire model
                 print("Saving model Checkpoint  ......")
                 store_to_file = "Saving model Checkpoint  ......"
@@ -587,6 +588,7 @@ if __name__ == '__main__':
     parser.add_argument("--beta2", default=0.999, type=float, help="beta2 for Adam optimizer")
     parser.add_argument("--seed", default=20, type=int, help="random seed")
     parser.add_argument("--save_interval", default=100, type=int, help=" model checkPoint save interval")
+    parser.add_argument("--num_workers", default=16, type=int, help="num of workers to load data")
     
     # distribute data parallel args
     parser.add_argument('--world_size', default=1, type=int,
