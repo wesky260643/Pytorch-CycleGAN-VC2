@@ -194,8 +194,9 @@ class CycleGANTraining:
                 num_iterations = (
                     n_samples // self.batch_size) * epoch + i
                 # print("iteration no: ", num_iterations, epoch)
-                if num_iterations > 10000:
-                    identity_loss_lambda = 0
+                # if num_iterations > 10000:
+                if epoch > 100:
+                    identity_loss_lambda = 0.01
                 if num_iterations > self.start_decay:
                     self.adjust_lr_rate(
                         self.generator_optimizer, name='generator')
