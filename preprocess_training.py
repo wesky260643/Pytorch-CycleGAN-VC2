@@ -55,7 +55,7 @@ def preprocess_for_training(train_A_dir, train_B_dir, cache_folder, ignore_pat=N
             timeaxes_A.extend(tmp_timeaxes_A)
             sps_A.extend(tmp_sps_A)
             aps_A.extend(tmp_aps_A)
-            coded_sps_A .extend(tmp_coded_sps_A)
+            coded_sps_A.extend(tmp_coded_sps_A)
 
     else:
         f0s_A, timeaxes_A, sps_A, aps_A, coded_sps_A = preprocess.world_encode_data(
